@@ -10,7 +10,21 @@ const bot = new TelegramBot(telegramToken, { polling: true });
 let circulatingSupply = 0;
 let tasks = []; 
 let waitingForInput = false;
+let userTasks = {};
 
+async function fetchTokenSymbol(tokenAddress) {
+    try {
+        const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data.pairs[0].baseToken.symbol; // Возвращаем символ токена
+    } catch (error) {
+        console.error('Error fetching token symbol:', error);
+        return null;
+    }
+}
 
 function createMainMenu() {
     return {
@@ -43,27 +57,37 @@ bot.on('message', (msg) => {
     if (text === 'Add task') {
         waitingForInput = true;
          
-        bot.sendMessage(chatId, 'Enter your token address (tokenAddress):');
+        bot.sendMessage(chatId, 'Enter task name:');
         bot.once('message', async (msg) => {
-            const tokenAddress = msg.text;
-            bot.sendMessage(chatId, 'Enter MCap change:');
+            const taskName = msg.text; // Сохраняем название задачи
+            bot.sendMessage(chatId, 'Enter your token address (tokenAddress):');
             bot.once('message', async (msg) => {
-                const targetMCapChange = parseFloat(msg.text);
-                waitingForInput = false; 
-                if (isNaN(targetMCapChange)) {
-                    return bot.sendMessage(chatId, 'Pls enter valid value for MCap change.');
+                const tokenAddress = msg.text;
+                const tokenSymbol = await fetchTokenSymbol(tokenAddress); // Получаем символ токена
+                if (!tokenSymbol) {
+                    return bot.sendMessage(chatId, 'Invalid token address. Please try again.');
                 }
-                tasks.push({ tokenAddress, targetMCapChange, chatId, lastMCap: 0 });
-                bot.sendMessage(chatId, `Task added: ${tokenAddress} with Mcap change ${targetMCapChange}`);
-                startTrackingTasks();
-
+                bot.sendMessage(chatId, 'Enter MCap change:');
+                bot.once('message', async (msg) => {
+                    const targetMCapChange = parseFloat(msg.text);
+                    waitingForInput = false; 
+                    if (isNaN(targetMCapChange)) {
+                        return bot.sendMessage(chatId, 'Pls enter valid value for MCap change.');
+                    }
+                    if (!userTasks[chatId]) {
+                        userTasks[chatId] = []; // Инициализируем массив задач для пользователя, если он еще не существует
+                    }
+                    userTasks[chatId].push({ taskName, tokenAddress, tokenSymbol, targetMCapChange, chatId, lastMCap: 0 });
+                    bot.sendMessage(chatId, `Task added: ${taskName} (${tokenSymbol}) with Mcap change ${targetMCapChange}`);
+                    startTrackingTasks(chatId); // Передаем chatId в функцию отслеживания
+                });
             });
         });
-    } else if (text === 'Task list') {
-        if (tasks.length === 0) {
+    }     else if (text === 'Task list') {
+        if (!userTasks[chatId] || userTasks[chatId].length === 0) {
             return bot.sendMessage(chatId, 'No active tasks yet.');
         }
-        const taskList = tasks.map((task, index) => `${index + 1}. ${task.tokenAddress} - ${task.targetMCapChange}`).join('\n');
+        const taskList = userTasks[chatId].map((task, index) => `${index + 1}. ${task.tokenAddress} - ${task.targetMCapChange}`).join('\n');
         bot.sendMessage(chatId, `Active tasks:\n${taskList}`);
     } else if (text === 'Delete task') {
         bot.sendMessage(chatId, 'Enter number of task to be deleted:');
@@ -117,14 +141,17 @@ async function fetchData(task) {
 
     if (Math.abs(currentMCap - task.lastMCap) >= targetMCapChange) {
         const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
-        await bot.sendMessage(chatId, `MCap changed for ${tokenAddress}: ${formattedMCap}`);
+        await bot.sendMessage(chatId, `MCap changed for ${task.tokenSymbol}: ${formattedMCap} (Target change: ${targetMCapChange})`);
         task.lastMCap = currentMCap;
     }
+    
 }
 
 function startTrackingTasks() {
     setInterval(() => {
-        tasks.forEach(task => fetchData(task));
+        if (userTasks[chatId]) {
+            userTasks[chatId].forEach(task => fetchData(task));
+        }
     }, 5000); // раз в 5 секунд фетч
 }
 
