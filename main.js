@@ -56,30 +56,29 @@ bot.on('message', (msg) => {
 
     if (text === 'Add task') {
         waitingForInput = true;
-         
         bot.sendMessage(chatId, 'Enter task name:');
         bot.once('message', async (msg) => {
-            const taskName = msg.text; // Сохраняем название задачи
+            const taskName = msg.text;
             bot.sendMessage(chatId, 'Enter your token address (tokenAddress):');
             bot.once('message', async (msg) => {
                 const tokenAddress = msg.text;
-                const tokenSymbol = await fetchTokenSymbol(tokenAddress); // Получаем символ токена
+                const tokenSymbol = await fetchTokenSymbol(tokenAddress);
                 if (!tokenSymbol) {
                     return bot.sendMessage(chatId, 'Invalid token address. Please try again.');
                 }
                 bot.sendMessage(chatId, 'Enter MCap change:');
                 bot.once('message', async (msg) => {
                     const targetMCapChange = parseFloat(msg.text);
-                    waitingForInput = false; 
+                    waitingForInput = false;
                     if (isNaN(targetMCapChange)) {
                         return bot.sendMessage(chatId, 'Pls enter valid value for MCap change.');
                     }
                     if (!userTasks[chatId]) {
-                        userTasks[chatId] = []; // Инициализируем массив задач для пользователя, если он еще не существует
+                        userTasks[chatId] = [];
                     }
                     userTasks[chatId].push({ taskName, tokenAddress, tokenSymbol, targetMCapChange, chatId, lastMCap: 0 });
-                    bot.sendMessage(chatId, `Task added: ${taskName} (${tokenSymbol}) with Mcap change ${targetMCapChange}`);
-                    startTrackingTasks(chatId); // Передаем chatId в функцию отслеживания
+                    console.log('Текущие задачи:', userTasks); // Отладочное сообщение
+                    bot.sendMessage(chatId, `Task added: ${taskName} (${ tokenAddress}) with target MCap change: ${targetMCapChange}`);
                 });
             });
         });
@@ -88,17 +87,18 @@ bot.on('message', (msg) => {
             return bot.sendMessage(chatId, 'No active tasks yet.');
         }
         const taskList = userTasks[chatId].map((task, index) => `${index + 1}. ${task.tokenAddress} - ${task.targetMCapChange}`).join('\n');
-        bot.sendMessage(chatId, `Active tasks:\n${taskList}`);
+        bot.sendMessage(chatId, `Active tasks:\n${taskList}`);    
     } else if (text === 'Delete task') {
         bot.sendMessage(chatId, 'Enter number of task to be deleted:');
         bot.once('message', (msg) => {
             const taskIndex = parseInt(msg.text) - 1;
-            if (taskIndex >= 0 && taskIndex < tasks.length) {
+            if (taskIndex >= 0 && taskIndex < tasks.length) { // Здесь нужно использовать userTasks[chatId]
                 tasks.splice(taskIndex, 1);
                 bot.sendMessage(chatId, 'Task deleted.');
             } else {
                 bot.sendMessage(chatId, 'Incorrect task number');
             }
+    
         });
     } else if (text === 'Delete all tasks') {
         tasks = [];
