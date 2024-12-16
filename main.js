@@ -64,7 +64,9 @@ bot.on('message', (msg) => {
                 const tokenAddress = msg.text;
                 const tokenSymbol = await fetchTokenSymbol(tokenAddress);
                 if (!tokenSymbol) {
-                    return bot.sendMessage(chatId, 'Invalid token address. Please try again.');
+                    bot.sendMessage(chatId, 'Invalid token address. Please try again.');
+                    waitingForInput = false;
+                    return;
                 }
                 bot.sendMessage(chatId, 'Enter MCap change:');
                 bot.once('message', async (msg) => {
@@ -83,7 +85,8 @@ bot.on('message', (msg) => {
                 });
             });
         });
-    }     else if (text === 'Task list') {
+    }
+         else if (text === 'Task list') {
         if (!userTasks[chatId] || userTasks[chatId].length === 0) {
             return bot.sendMessage(chatId, 'No active tasks yet.');
         }
@@ -125,33 +128,32 @@ async function fetchCirculatingSupply(tokenAddress) {
 }
 
 async function fetchData(task) {
-    try{
-    console.log('Fetching data for task:', task);
-    const { tokenAddress, targetMCapChange, chatId } = task;
-    
-    if (circulatingSupply === 0) {
-        circulatingSupply = await fetchCirculatingSupply(tokenAddress);
-        if (circulatingSupply === null) return;
-    }
-    
-    const response = await fetch(`https://api.jup.ag/price/v2?ids=${tokenAddress}&onlyDirectRoutes=true`);
-    if (!response.ok) {
-        console.error(`Error fetching price for ${tokenAddress}:`, response.status);
-        return;
-    }
+    const { tokenAddress, targetMCapChange, chatId, lastMCap, taskName, tokenSymbol } = task;
 
-    const data = await response.json();
-    const price = parseFloat(data.data[tokenAddress].price);
-    const currentMCap = price * circulatingSupply;
+    try {
+        if (circulatingSupply === 0) {
+            circulatingSupply = await fetchCirculatingSupply(tokenAddress);
+            if (circulatingSupply === null) return;
+        }
 
-    const mCapChange = Math.abs(currentMCap - task.lastMCap);
-    if (mCapChange >= targetMCapChange) {
-        const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
-        await bot.sendMessage(chatId, `MCap changed for ${taskName} ($${task.tokenSymbol}): ${formattedMCap} (Target change: ${targetMCapChange})`);
-        task.lastMCap = currentMCap;
-    }
+        const response = await fetch(`https://api.jup.ag/price/v2?ids=${tokenAddress}&onlyDirectRoutes=true`);
+        if (!response.ok) {
+            console.error(`Error fetching price for ${tokenAddress}:`, response.status);
+            return;
+        }
+
+        const data = await response.json();
+        const price = parseFloat(data.data[tokenAddress].price);
+        const currentMCap = price * circulatingSupply;
+
+        const mCapChange = Math.abs(currentMCap - lastMCap);
+        if (mCapChange >= targetMCapChange) {
+            const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
+            await bot.sendMessage(chatId, `MCap changed for ${taskName} $${tokenSymbol}: ${formattedMCap}, Target change: ${targetMCapChange}`);
+            task.lastMCap = currentMCap; 
+        }
     } catch (error) {
-    console.error('Error in fetchData:', error);
+        console.error('Error in fetchData:', error);
     }
 }
 
@@ -162,10 +164,10 @@ function startTrackingTasks() {
                 userTasks[chatId].forEach(task => fetchData(task));
             }
         }
-    }, 5000); // раз в 5 секунд фетч
+    }, 10000); // раз в 10 секунд фетч
 }
 
 bot.onText(/\/help/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, '');
+    bot.sendMessage(chatId, 'jjuzyp.gitbook.io/logovopricetrackerbot-guide');
 });
