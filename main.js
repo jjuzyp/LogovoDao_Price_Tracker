@@ -80,7 +80,7 @@ bot.on('message', (msg) => {
         tasks = [];
         bot.sendMessage(chatId, 'All tasks have been deleted.');
     } else if (text === 'Help') {
-        bot.sendMessage(chatId, 'Available options:\Add task - Add new task\nTask list - Active task list\nDelete task - Delete task\nDelete all tasks - Delete all tasks\nHelp - Help');
+        bot.sendMessage(chatId, 'Available options:\nAdd task - Add new task\nTask list - Active task list\nDelete task - Delete task\nDelete all tasks - Delete all tasks\nHelp - Help\njjuzyp.gitbook.io/logovopricetrackerbot-guide');
 }});
 
 async function fetchCirculatingSupply(tokenAddress) {
