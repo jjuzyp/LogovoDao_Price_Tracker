@@ -125,6 +125,8 @@ async function fetchCirculatingSupply(tokenAddress) {
 }
 
 async function fetchData(task) {
+    try{
+    console.log('Fetching data for task:', task);
     const { tokenAddress, targetMCapChange, chatId } = task;
     
     if (circulatingSupply === 0) {
@@ -148,7 +150,9 @@ async function fetchData(task) {
         await bot.sendMessage(chatId, `MCap changed for ${taskName} ($${task.tokenSymbol}): ${formattedMCap} (Target change: ${targetMCapChange})`);
         task.lastMCap = currentMCap;
     }
-    
+    } catch (error) {
+    console.error('Error in fetchData:', error);
+    }
 }
 
 function startTrackingTasks() {
