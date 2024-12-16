@@ -142,7 +142,8 @@ async function fetchData(task) {
     const price = parseFloat(data.data[tokenAddress].price);
     const currentMCap = price * circulatingSupply;
 
-    if (Math.abs(currentMCap - task.lastMCap) >= targetMCapChange) {
+    const mCapChange = Math.abs(currentMCap - task.lastMCap);
+    if (mCapChange >= targetMCapChange) {
         const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
         await bot.sendMessage(chatId, `MCap changed for ${task.tokenSymbol}: ${formattedMCap} (Target change: ${targetMCapChange})`);
         task.lastMCap = currentMCap;
@@ -152,8 +153,10 @@ async function fetchData(task) {
 
 function startTrackingTasks() {
     setInterval(() => {
-        if (userTasks[chatId]) {
-            userTasks[chatId].forEach(task => fetchData(task));
+        for (const chatId in userTasks) {
+            if (userTasks[chatId]) {
+                userTasks[chatId].forEach(task => fetchData(task));
+            }
         }
     }, 5000); // раз в 5 секунд фетч
 }
