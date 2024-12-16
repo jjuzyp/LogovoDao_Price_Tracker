@@ -77,8 +77,9 @@ bot.on('message', (msg) => {
                         userTasks[chatId] = [];
                     }
                     userTasks[chatId].push({ taskName, tokenAddress, tokenSymbol, targetMCapChange, chatId, lastMCap: 0 });
-                    console.log('Текущие задачи:', userTasks); // Отладочное сообщение
+                    console.log('Текущие задачи:', userTasks);
                     bot.sendMessage(chatId, `Task added: ${taskName} (${ tokenAddress}) with target MCap change: ${targetMCapChange}`);
+                    startTrackingTasks();
                 });
             });
         });
@@ -89,19 +90,21 @@ bot.on('message', (msg) => {
         const taskList = userTasks[chatId].map((task, index) => `${index + 1}. ${task.tokenAddress} - ${task.targetMCapChange}`).join('\n');
         bot.sendMessage(chatId, `Active tasks:\n${taskList}`);    
     } else if (text === 'Delete task') {
+        if (!userTasks[chatId] || userTasks[chatId].length === 0) {
+            return bot.sendMessage(chatId, 'No active tasks to delete.');
+        }
         bot.sendMessage(chatId, 'Enter number of task to be deleted:');
         bot.once('message', (msg) => {
             const taskIndex = parseInt(msg.text) - 1;
-            if (taskIndex >= 0 && taskIndex < tasks.length) { // Здесь нужно использовать userTasks[chatId]
-                tasks.splice(taskIndex, 1);
+            if (taskIndex >= 0 && taskIndex < userTasks[chatId].length) {
+                userTasks[chatId].splice(taskIndex, 1); 
                 bot.sendMessage(chatId, 'Task deleted.');
             } else {
                 bot.sendMessage(chatId, 'Incorrect task number');
             }
-    
         });
     } else if (text === 'Delete all tasks') {
-        tasks = [];
+        userTasks[chatId] = [];
         bot.sendMessage(chatId, 'All tasks have been deleted.');
     } else if (text === 'Help') {
         bot.sendMessage(chatId, 'Available options:\nAdd task - Add new task\nTask list - Active task list\nDelete task - Delete task\nDelete all tasks - Delete all tasks\nHelp - Help\njjuzyp.gitbook.io/logovopricetrackerbot-guide');
