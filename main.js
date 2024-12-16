@@ -78,7 +78,7 @@ bot.on('message', (msg) => {
                     }
                     userTasks[chatId].push({ taskName, tokenAddress, tokenSymbol, targetMCapChange, chatId, lastMCap: 0 });
                     console.log('Текущие задачи:', userTasks);
-                    bot.sendMessage(chatId, `Task added: ${taskName} (${ tokenAddress}) with target MCap change: ${targetMCapChange}`);
+                    bot.sendMessage(chatId, `Task added: ${taskName} (${tokenAddress}) with target MCap change: ${targetMCapChange}`);
                     startTrackingTasks();
                 });
             });
@@ -87,9 +87,9 @@ bot.on('message', (msg) => {
         if (!userTasks[chatId] || userTasks[chatId].length === 0) {
             return bot.sendMessage(chatId, 'No active tasks yet.');
         }
-        const taskList = userTasks[chatId].map((task, index) => `${index + 1}. ${task.tokenAddress} - ${task.targetMCapChange}`).join('\n');
+        const taskList = userTasks[chatId].map((task, index) => `${index + 1}. ${task.taskName} - ${task.tokenAddress} - $${task.tokenSymbol} - Target change: ${task.targetMCapChange}`).join('\n');
         bot.sendMessage(chatId, `Active tasks:\n${taskList}`);    
-    } else if (text === 'Delete task') {
+        } else if (text === 'Delete task') {
         if (!userTasks[chatId] || userTasks[chatId].length === 0) {
             return bot.sendMessage(chatId, 'No active tasks to delete.');
         }
@@ -145,7 +145,7 @@ async function fetchData(task) {
     const mCapChange = Math.abs(currentMCap - task.lastMCap);
     if (mCapChange >= targetMCapChange) {
         const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
-        await bot.sendMessage(chatId, `MCap changed for ${task.tokenSymbol}: ${formattedMCap} (Target change: ${targetMCapChange})`);
+        await bot.sendMessage(chatId, `MCap changed for ${taskName} ($${task.tokenSymbol}): ${formattedMCap} (Target change: ${targetMCapChange})`);
         task.lastMCap = currentMCap;
     }
     
