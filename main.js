@@ -72,7 +72,7 @@ async function fetchTokenSymbol(tokenAddress) {
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, '🔥 Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button!     ⚠️Every time bot got updates your tasks gonna be deleted! I do not store any of your data!', createInlineMenu());
+    bot.sendMessage(chatId, '🔥 Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button!     ⚠️Every time bot gets an update your tasks gonna be deleted! I do not store any of your data!', createInlineMenu());
 });
 
 
@@ -126,7 +126,7 @@ bot.on('callback_query', async (callbackQuery) => {
                     const taskType = callbackQuery.data;
                     
                     if (taskType === 'back_to_menu') {
-                        bot.editMessageText('🔥 Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button!     ⚠️Every time bot got updates your tasks gonna be deleted! I do not store any of your data!', {
+                        bot.editMessageText('🔥 Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button!     ⚠️Every time bot gets an update your tasks gonna be deleted! I do not store any of your data!', {
                             chat_id: chatId,
                             message_id: messageId,
                             reply_markup: createInlineMenu().reply_markup
@@ -323,7 +323,7 @@ bot.on('callback_query', async (callbackQuery) => {
             break;
 
         case 'back_to_menu':
-            bot.editMessageText('🔥 Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button!     ⚠️Every time bot got updates your tasks gonna be deleted! I do not store any of your data!', {
+            bot.editMessageText('🔥 Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button!     ⚠️Every time bot gets an update your tasks gonna be deleted! I do not store any of your data!', {
                 chat_id: chatId,
                 message_id: messageId,
                 reply_markup: createInlineMenu().reply_markup
