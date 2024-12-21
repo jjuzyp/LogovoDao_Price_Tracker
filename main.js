@@ -1,6 +1,46 @@
 import TelegramBot from 'node-telegram-bot-api';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+
+function createLogger() {
+    const logDir = path.join(process.cwd(), 'logs');
+    
+    if (!fs.existsSync(logDir)){
+        fs.mkdirSync(logDir);
+    }
+
+    const logFileName = `${new Date().toISOString().split('T')[0]}_log.txt`;
+    const logFilePath = path.join(logDir, logFileName);
+
+    return {
+        log: (message) => {
+            const timestamp = new Date().toISOString();
+            const logMessage = `[${timestamp}] ${message}\n`;
+            
+            fs.appendFile(logFilePath, logMessage, (err) => {
+                if (err) logger.error('Error writing log:', err);
+            });
+            
+            console.log(logMessage.trim());
+        },
+        error: (message) => {
+            const timestamp = new Date().toISOString();
+            const errorMessage = `[ERROR][${timestamp}] ${message}\n`;
+            
+            fs.appendFile(logFilePath, errorMessage, (err) => {
+                if (err) logger.error('Error writing log:', err);
+            });
+            
+            console.error(errorMessage.trim());
+        }
+    };
+}
+
+const logger = createLogger();
+
+
 
 dotenv.config();
 const telegramToken = process.env.TELEGRAM_TOKEN;
@@ -8,7 +48,7 @@ const RPC = process.env.RPC;
 const bot = new TelegramBot(telegramToken, { polling: true });
 
 bot.on("polling_error", (error) => {
-    console.error("Polling error:", error);
+    logger.error("Polling error:", error);
 });
 
 let userTasks = {};
@@ -20,9 +60,11 @@ async function fetchTokenSymbol(tokenAddress) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
+        logger.log(`Task ${task.taskName} successfully processed `)
         return data.pairs[0].baseToken.symbol; // returning token symbol
+        
     } catch (error) {
-        console.error('Error fetching token symbol:', error);
+        logger.error('Error fetching token symbol:', error);
         return null;
     }
 }
@@ -294,14 +336,14 @@ async function fetchTokenPrice(tokenAddress) {
     try {
         const response = await fetch(`https://api.jup.ag/price/v2?ids=${tokenAddress}&onlyDirectRoutes=true`);
         if (!response.ok) {
-            console.error(`Error fetching price for ${tokenAddress}:`, response.status);
+            logger.error(`Error fetching price for ${tokenAddress}:`, response.status);
             return null;
         }
 
         const data = await response.json();
         return parseFloat(data.data[tokenAddress].price);
     } catch (error) {
-        console.error('Error fetching token price:', error);
+        logger.error('Error fetching token price:', error);
         return null;
     }
 }
@@ -326,10 +368,10 @@ async function fetchCirculatingSupply(tokenAddress) {
         }
 
         const data = await response.json();
-        console.log(data.result.value.uiAmountString);
+        logger.log(data.result.value.uiAmountString);
         return data.result.value.uiAmountString || 1_000_000_000; // returning amount or 1 billion as a default for shitcoin
     } catch (error) {
-        console.error('Error fetching circulating supply:', error);
+        logger.error('Error fetching circulating supply:', error);
         return null;
     }
 }
@@ -337,17 +379,17 @@ async function fetchCirculatingSupply(tokenAddress) {
 async function fetchData(task) {
     const { tokenAddress, chatId, taskName, tokenSymbol, type  } = task;
 
-    console.log(`Fetching data for task: ${task.taskName}`);
+    logger.log(`Fetching data for task: ${task.taskName}`);
 
     try {
 
         const circulatingSupply = await fetchCirculatingSupply(tokenAddress);
         const price = await fetchTokenPrice(tokenAddress);
         if (!price || !circulatingSupply) return;
-        console.log(price);
+        logger.log(price);
 
         const currentMCap = price * circulatingSupply;
-        console.log(Math.round(currentMCap).toLocaleString('de-DE'));
+        logger.log(Math.round(currentMCap).toLocaleString('de-DE'));
         
         if (type === 'mcap_change') {
             const mCapChange = Math.abs(currentMCap - task.lastMCap);
@@ -374,7 +416,7 @@ async function fetchData(task) {
             }
         }
     }catch (error) {
-        console.error('Error in fetchData:', error);
+        logger.error('Error in fetchData:', error);
 }
 }
 let trackingStarted = false;
