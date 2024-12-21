@@ -11,7 +11,6 @@ bot.on("polling_error", (error) => {
     console.error("Polling error:", error);
 });
 
-let circulatingSupply = 0;
 let userTasks = {};
 
 async function fetchTokenSymbol(tokenAddress) {
@@ -31,7 +30,7 @@ async function fetchTokenSymbol(tokenAddress) {
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button! Choose your option:', createInlineMenu());
+    bot.sendMessage(chatId, '🔥 Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button!     ⚠️Every time bot got updates your tasks gonna be deleted! I do not store any of your data!', createInlineMenu());
 });
 
 
@@ -48,7 +47,6 @@ function createInlineMenu() {
     };
 }
 
-let waitingForInput = false;
 
 bot.on('callback_query', async (callbackQuery) => {
     const chatId = callbackQuery.message.chat.id;
@@ -57,18 +55,8 @@ bot.on('callback_query', async (callbackQuery) => {
 
     bot.answerCallbackQuery(callbackQuery.id);
 
-    if (waitingForInput) {
-        bot.editMessageText('You are currently in input action(creating task), pls end it before continuing.', {
-            chat_id: chatId,
-            message_id: messageId,
-            reply_markup: createInlineMenu().reply_markup
-        });
-        return;
-    }
-
     switch (action) {
         case 'add_task':
-            waitingForInput = true;
             bot.editMessageText('Enter task name:', {
                 chat_id: chatId,
                 message_id: messageId,
@@ -79,34 +67,31 @@ bot.on('callback_query', async (callbackQuery) => {
                 }
             });
 
-            // Сохраняем контекст для последующих шагов
             bot.once('message', (msg) => {
                 const taskName = msg.text;
-                bot.editMessageText('Enter your token address (tokenAddress):', {
+                bot.editMessageText('Choose your task type:', {
                     chat_id: chatId,
                     message_id: messageId,
                     reply_markup: {
                         inline_keyboard: [
+                            [{ text: 'MCap change', callback_data: 'task_mcap_change' }],
+                            [{ text: 'MCap target hit', callback_data: 'task_mcap_target' }],
                             [{ text: 'back', callback_data: 'back_to_menu' }]
                         ]
                     }
                 });
-
-                bot.once('message', async (msg) => {
-                    const tokenAddress = msg.text;
-                    const tokenSymbol = await fetchTokenSymbol(tokenAddress);
+                bot.once('callback_query', async (callbackQuery) => {
+                    const taskType = callbackQuery.data;
                     
-                    if (!tokenSymbol) {
-                        bot.editMessageText('Wrong token address. Please, try again.', {
+                    if (taskType === 'back_to_menu') {
+                        bot.editMessageText('🔥 Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button!     ⚠️Every time bot got updates your tasks gonna be deleted! I do not store any of your data!', {
                             chat_id: chatId,
                             message_id: messageId,
                             reply_markup: createInlineMenu().reply_markup
                         });
-                        waitingForInput = false;
                         return;
                     }
-
-                    bot.editMessageText('Enter MCap change:', {
+                    bot.editMessageText('Enter your token address:', {
                         chat_id: chatId,
                         message_id: messageId,
                         reply_markup: {
@@ -117,6 +102,26 @@ bot.on('callback_query', async (callbackQuery) => {
                     });
 
                     bot.once('message', async (msg) => {
+                        const tokenAddress = msg.text;
+                        const tokenSymbol = await fetchTokenSymbol(tokenAddress);
+    
+                    
+                        if (!tokenSymbol) {
+                            bot.editMessageText('Wrong token address. Please try again.', {
+                                chat_id: chatId,
+                                message_id: messageId,
+                                reply_markup: createInlineMenu().reply_markup
+                            });
+                            return;
+                        }
+                        
+                        if (taskType === 'task_mcap_change') {
+                            bot.editMessageText('Enter MCap change:', {
+                                chat_id: chatId,
+                                message_id: messageId
+                            });
+
+                    bot.once('message', async (msg) => {
                         const targetMCapChange = parseFloat(msg.text);
                         
                         if (isNaN(targetMCapChange)) {
@@ -125,7 +130,6 @@ bot.on('callback_query', async (callbackQuery) => {
                                 message_id: messageId,
                                 reply_markup: createInlineMenu().reply_markup
                             });
-                            waitingForInput = false;
                             return;
                         }
 
@@ -139,21 +143,60 @@ bot.on('callback_query', async (callbackQuery) => {
                             tokenSymbol, 
                             targetMCapChange, 
                             chatId, 
-                            lastMCap: 0 
+                            lastMCap: 0,
+                            type: 'mcap_change'
                         });
 
-                        bot.editMessageText(`Task added: ${taskName} (${tokenAddress}) with MCap change: ${targetMCapChange}`, {
+                        bot.editMessageText(`Task added: ${taskName} ($${tokenSymbol})with MCap change: ${Math.round(targetMCapChange).toLocaleString('de-DE')}`, {
                             chat_id: chatId,
                             message_id: messageId,
                             reply_markup: createInlineMenu().reply_markup
                         });
-
-                        waitingForInput = false;
                         startTrackingTasks();
                     });
-                });
+                } else if (taskType === 'task_mcap_target') {
+                    bot.editMessageText('Enter MCap target hit:', {
+                        chat_id: chatId,
+                        message_id: messageId
+                    });
+                    bot.once('message', async (msg) => {
+                        const targetMCap = parseFloat(msg.text);
+
+                        if (isNaN(targetMCap)) {
+                            bot.editMessageText('Pls, enter correct MCap change.', {
+                                chat_id: chatId,
+                                message_id: messageId,
+                                reply_markup: createInlineMenu().reply_markup
+                            });
+                            return;
+                        }
+                        
+                        if (!userTasks[chatId]) {
+                            userTasks[chatId] = [];
+                        }
+
+                        userTasks[chatId].push({ 
+                            taskName, 
+                            tokenAddress,
+                            tokenSymbol, 
+                            chatId, 
+                            type: 'mcap_target',
+                            targetMCap: targetMCap,
+                            notified: false
+                        });
+                        bot.editMessageText(`Task added: ${taskName} ($${tokenSymbol})with target MCap: ${Math.round(targetMCap).toLocaleString('de-DE')}`, {
+                            chat_id: chatId,
+                            message_id: messageId,
+                            reply_markup: createInlineMenu().reply_markup
+                        });
+                        startTrackingTasks();
+                    });
+                }
             });
-            break;
+        });
+    });
+
+    break;
 
         case 'task_list':
             if (!userTasks[chatId] || userTasks[chatId].length === 0) {
@@ -165,9 +208,13 @@ bot.on('callback_query', async (callbackQuery) => {
                 return;
             }
             
-            const taskList = userTasks[chatId].map((task, index) => 
-                `${index + 1}. ${task.taskName} - ${task.tokenAddress} - $${task.tokenSymbol} - Целевое изменение: ${task.targetMCapChange}`
-            ).join('\n');
+            const taskList = userTasks[chatId].map((task, index) => {
+                if (task.type === 'mcap_change') {
+                    return `${index + 1}. ${task.taskName} - ${task.tokenAddress} - $${task.tokenSymbol} - MCap target change: ${Math.round(task.targetMCapChange).toLocaleString('de-DE')}`;
+                } else if (task.type === 'mcap_target') {
+                    return `${index + 1}. ${task.taskName} - ${task.tokenAddress} - $${task.tokenSymbol} - MCap target hit: ${Math.round(task.targetMCap).toLocaleString('de-DE')}`;
+                }
+            }).join('\n');
             
             bot.editMessageText(`Active tasks:\n${taskList}`, {
                 chat_id: chatId,
@@ -175,6 +222,7 @@ bot.on('callback_query', async (callbackQuery) => {
                 reply_markup: createInlineMenu().reply_markup
             });
             break;
+        
 
         case 'delete_task':
             if (!userTasks[chatId] || userTasks[chatId].length === 0) {
@@ -200,7 +248,7 @@ bot.on('callback_query', async (callbackQuery) => {
                 const taskIndex = parseInt(msg.text) - 1;
                 if (taskIndex >= 0 && taskIndex < userTasks[chatId].length) {
                     userTasks[chatId].splice(taskIndex, 1);
-                    bot.editMessageText('Задача удалена.', {
+                    bot.editMessageText('Task have been deleted.', {
                         chat_id: chatId,
                         message_id: messageId,
                         reply_markup: createInlineMenu().reply_markup
@@ -225,7 +273,7 @@ bot.on('callback_query', async (callbackQuery) => {
             break;
 
         case 'help':
-            bot.editMessageText('Avaliable options:\n- Add task - Add new task\n- Task list - Active task list\n- Delete task - Delete 1 task\n- Delete all tasks - Delete all existing tasks\n- Help - Help\n- jjuzyp.gitbook.io/logovopricetrackerbot-guide', {
+            bot.editMessageText('Avaliable options:\n- Add task - Add new task\n- Task list - Active task list\n- Delete task - Delete 1 task\n- Delete all tasks - Delete all existing tasks\n- Bot guide - jjuzyp.gitbook.io/logovopricetrackerbot-guide\n Made by https://t.me/AXAXAXAXAXAXAXAXAXAXAXXAXAXAA', {
                 chat_id: chatId,
                 message_id: messageId,
                 reply_markup: createInlineMenu().reply_markup
@@ -233,16 +281,7 @@ bot.on('callback_query', async (callbackQuery) => {
             break;
 
         case 'back_to_menu':
-            bot.editMessageText('Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button! Choose your option:', {
-                chat_id: chatId,
-                message_id: messageId,
-                reply_markup: createInlineMenu().reply_markup
-            });
-            waitingForInput = false;
-            break;
-
-        default:
-            bot.editMessageText('Неизвестное действие.', {
+            bot.editMessageText('🔥 Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button!     ⚠️Every time bot got updates your tasks gonna be deleted! I do not store any of your data!', {
                 chat_id: chatId,
                 message_id: messageId,
                 reply_markup: createInlineMenu().reply_markup
@@ -251,6 +290,21 @@ bot.on('callback_query', async (callbackQuery) => {
     }
 });
 
+async function fetchTokenPrice(tokenAddress) {
+    try {
+        const response = await fetch(`https://api.jup.ag/price/v2?ids=${tokenAddress}&onlyDirectRoutes=true`);
+        if (!response.ok) {
+            console.error(`Error fetching price for ${tokenAddress}:`, response.status);
+            return null;
+        }
+
+        const data = await response.json();
+        return parseFloat(data.data[tokenAddress].price);
+    } catch (error) {
+        console.error('Error fetching token price:', error);
+        return null;
+    }
+}
 
 async function fetchCirculatingSupply(tokenAddress) {
     try {
@@ -281,39 +335,51 @@ async function fetchCirculatingSupply(tokenAddress) {
 }
 
 async function fetchData(task) {
-    const { tokenAddress, targetMCapChange, chatId, lastMCap, taskName, tokenSymbol } = task;
+    const { tokenAddress, chatId, taskName, tokenSymbol, type  } = task;
 
     console.log(`Fetching data for task: ${task.taskName}`);
 
     try {
 
-        circulatingSupply = await fetchCirculatingSupply(tokenAddress);
+        const circulatingSupply = await fetchCirculatingSupply(tokenAddress);
+        const price = await fetchTokenPrice(tokenAddress);
+        if (!price || !circulatingSupply) return;
+        console.log(price);
 
-        const response = await fetch(`https://api.jup.ag/price/v2?ids=${tokenAddress}&onlyDirectRoutes=true`);
-        if (!response.ok) {
-            console.error(`Error fetching price for ${tokenAddress}:`, response.status);
-            return;
-        }
-
-        const data = await response.json();
-        const price = parseFloat(data.data[tokenAddress].price);
         const currentMCap = price * circulatingSupply;
+        console.log(Math.round(currentMCap).toLocaleString('de-DE'));
+        
+        if (type === 'mcap_change') {
+            const mCapChange = Math.abs(currentMCap - task.lastMCap);
+            if (mCapChange >= task.targetMCapChange) {
+                const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
+                await bot.sendMessage(chatId, `⚡ MCap changed for $${tokenSymbol}(${taskName}): ${formattedMCap}, Target change: ${Math.round(task.targetMCapChange).toLocaleString('de-DE')}`);
+                task.lastMCap = currentMCap; 
+            }
+        } else if (type === 'mcap_target') {
+            if (!task.lastMCap) {
+                task.lastMCap = currentMCap;
+            }
+            const crossedUp = task.lastMCap < task.targetMCap && currentMCap >= task.targetMCap;
+            const crossedDown = task.lastMCap > task.targetMCap && currentMCap <= task.targetMCap;
 
-        const mCapChange = Math.abs(currentMCap - lastMCap);
-        if (mCapChange >= targetMCapChange) {
-            const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
-            await bot.sendMessage(chatId, `MCap changed for ${taskName} $${tokenSymbol}: ${formattedMCap}, Target change: ${targetMCapChange}`);
-            task.lastMCap = currentMCap; 
+            if (crossedUp || crossedDown) {
+                const direction = crossedUp ? '📈 outbid' : '📉 downbid';
+                const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
+                const formattedTargetMCap = Math.round(task.targetMCap).toLocaleString('de-DE');
+    
+                await bot.sendMessage(chatId, `Token $${tokenSymbol}(${taskName}) ${direction} Target MCap: ${formattedTargetMCap}. Current MCap: ${formattedMCap}`);
+                
+                task.lastMCap = currentMCap;
+            }
         }
-    } catch (error) {
+    }catch (error) {
         console.error('Error in fetchData:', error);
-    }
 }
-
+}
 let trackingStarted = false;
 
 function startTrackingTasks() {
-    
     if (trackingStarted) return;
     trackingStarted = true;
     
