@@ -60,11 +60,11 @@ async function fetchTokenSymbol(tokenAddress) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        logger.log(`Task ${task.taskName} successfully processed `)
+        logger.log(data);
         return data.pairs[0].baseToken.symbol; // returning token symbol
         
     } catch (error) {
-        logger.error('Error fetching token symbol:', error);
+        console.error('Error fetching token symbol:', error);
         return null;
     }
 }
@@ -189,7 +189,7 @@ bot.on('callback_query', async (callbackQuery) => {
                             type: 'mcap_change'
                         });
 
-                        bot.editMessageText(`Task added: ${taskName} ($${tokenSymbol})with MCap change: ${Math.round(targetMCapChange).toLocaleString('de-DE')}`, {
+                        bot.editMessageText(`Task added: ${taskName} ($${tokenSymbol}) with MCap change: ${Math.round(targetMCapChange).toLocaleString('de-DE')}`, {
                             chat_id: chatId,
                             message_id: messageId,
                             reply_markup: createInlineMenu().reply_markup
@@ -226,7 +226,7 @@ bot.on('callback_query', async (callbackQuery) => {
                             targetMCap: targetMCap,
                             notified: false
                         });
-                        bot.editMessageText(`Task added: ${taskName} ($${tokenSymbol})with target MCap: ${Math.round(targetMCap).toLocaleString('de-DE')}`, {
+                        bot.editMessageText(`Task added: ${taskName} ($${tokenSymbol}) with target MCap: ${Math.round(targetMCap).toLocaleString('de-DE')}`, {
                             chat_id: chatId,
                             message_id: messageId,
                             reply_markup: createInlineMenu().reply_markup
