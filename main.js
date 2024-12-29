@@ -323,7 +323,7 @@ bot.on('callback_query', async (callbackQuery) => {
             break;
 
         case 'back_to_menu':
-            bot.editMessageText('🔥 Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button!     ⚠️Every time bot gets an update your tasks gonna be deleted! I do not store any of your data!', {
+            bot.editMessageText('🔥 Wellcome to LogovoPriceTrackerBot, this bot tracks solana token price changes! For more information use "Help" button!\n⚠️Every time bot gets an update your tasks gonna be deleted! I do not store any of your data!', {
                 chat_id: chatId,
                 message_id: messageId,
                 reply_markup: createInlineMenu().reply_markup
@@ -395,7 +395,7 @@ async function fetchData(task) {
             const mCapChange = Math.abs(currentMCap - task.lastMCap);
             if (mCapChange >= task.targetMCapChange) {
                 const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
-                await bot.sendMessage(chatId, `⚡ MCap changed for $${tokenSymbol}(${taskName}): ${formattedMCap}, Target change: ${Math.round(task.targetMCapChange).toLocaleString('de-DE')}`);
+                await bot.sendMessage(chatId, `⚡ Market Cap changed for $${tokenSymbol}(${taskName}), target change: ${Math.round(task.targetMCapChange).toLocaleString('de-DE')}\n\n🟢 Current MC: ${formattedMCap}\n\n📎 \`${tokenAddress}\`\n[DS](https://dexscreener.com/solana/${tokenAddress}) | [GM](https://gmgn.ai/sol/token/${tokenAddress})`, { parse_mode: 'Markdown', disable_web_page_preview: true });
                 task.lastMCap = currentMCap; 
             }
         } else if (type === 'mcap_target') {
@@ -410,7 +410,7 @@ async function fetchData(task) {
                 const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
                 const formattedTargetMCap = Math.round(task.targetMCap).toLocaleString('de-DE');
     
-                await bot.sendMessage(chatId, `Token $${tokenSymbol}(${taskName}) ${direction} Target MCap: ${formattedTargetMCap}. Current MCap: ${formattedMCap}`);
+                await bot.sendMessage(chatId, `Token $${tokenSymbol}(${taskName}) ${direction} Target MCap: ${formattedTargetMCap}\n\n🟢 Current MCap: ${formattedMCap}\n\n📎 \`${tokenAddress}\`\n[DS](https://dexscreener.com/solana/${tokenAddress}) | [GM](https://gmgn.ai/sol/token/${tokenAddress})`, { parse_mode: 'Markdown', disable_web_page_preview: true });
                 
                 task.lastMCap = currentMCap;
             }
