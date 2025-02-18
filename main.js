@@ -395,7 +395,7 @@ async function fetchData(task) {
             const mCapChange = Math.abs(currentMCap - task.lastMCap);
             if (mCapChange >= task.targetMCapChange) {
                 const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
-                await bot.sendMessage(chatId, `⚡ Market Cap changed for $${tokenSymbol}(${taskName}), target change: ${Math.round(task.targetMCapChange).toLocaleString('de-DE')}\n\n🟢 Current MC: ${formattedMCap}\n\n📎 \`${tokenAddress}\`\n[DS](https://dexscreener.com/solana/${tokenAddress}) | [GM](https://gmgn.ai/sol/token/${tokenAddress})`, { parse_mode: 'Markdown', disable_web_page_preview: true });
+                await bot.sendMessage(chatId, `⚡ Market Cap changed for $${tokenSymbol}(${taskName}), target change: ${Math.round(task.targetMCapChange).toLocaleString('de-DE')}\n\n💸 Current price: ${price} $\n\n🟢 Current MC: ${formattedMCap} $\n\n📎 \`${tokenAddress}\`\n[DS](https://dexscreener.com/solana/${tokenAddress}) | [GM](https://gmgn.ai/sol/token/${tokenAddress})`, { parse_mode: 'Markdown', disable_web_page_preview: true });
                 task.lastMCap = currentMCap; 
             }
         } else if (type === 'mcap_target') {
@@ -410,7 +410,7 @@ async function fetchData(task) {
                 const formattedMCap = Math.round(currentMCap).toLocaleString('de-DE');
                 const formattedTargetMCap = Math.round(task.targetMCap).toLocaleString('de-DE');
     
-                await bot.sendMessage(chatId, `Token $${tokenSymbol}(${taskName}) ${direction} Target MCap: ${formattedTargetMCap}\n\n🟢 Current MCap: ${formattedMCap}\n\n📎 \`${tokenAddress}\`\n[DS](https://dexscreener.com/solana/${tokenAddress}) | [GM](https://gmgn.ai/sol/token/${tokenAddress})`, { parse_mode: 'Markdown', disable_web_page_preview: true });
+                await bot.sendMessage(chatId, `Token $${tokenSymbol}(${taskName}) ${direction} Target MCap: ${formattedTargetMCap}\n\n🟢 Current price: ${price} $\n\n💸 Current MCap: ${formattedMCap} $\n\n📎 \`${tokenAddress}\`\n[DS](https://dexscreener.com/solana/${tokenAddress}) | [GM](https://gmgn.ai/sol/token/${tokenAddress})`, { parse_mode: 'Markdown', disable_web_page_preview: true });
                 
                 task.lastMCap = currentMCap;
             }
